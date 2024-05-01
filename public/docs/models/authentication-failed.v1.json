@@ -1,0 +1,32 @@
+{
+  "title": "Authentication Failed",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "x-examples": {
+    "Example": {
+      "value": {
+        "error": {
+          "message": "OAuth authentication failed",
+          "description": "Credentials are not valid or header missing",
+          "status": 401
+        }
+      }
+    }
+  },
+  "description": "Authentication Failed Message"
+}

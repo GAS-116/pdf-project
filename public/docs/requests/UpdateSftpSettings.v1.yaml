@@ -1,0 +1,2 @@
+UpdateSftpSettings:
+  $ref: './CreateSftpSettings.v1.yaml#/CreateSftpSettings'

@@ -1,0 +1,62 @@
+#####################################
+### Basics
+#####################################
+
+## gas pdf-generate-service image
+image:
+  registry: my.sh
+  repository: my/pdf-generate-service
+  tag: 0.0.1
+  pullPolicy: Always
+  username: harborUsername
+  password: harborPassword
+  email: sa-ansible-terraform-my@gas.com
+  pullSecretName: regcred
+
+# Ingress configuration
+ingress:
+  enabled: true
+  class: nginx
+  host: pdf-generate-service.local
+  clusterIssuer: letsencrypt-staging
+
+
+#####################################
+### Laravel env variables
+#####################################
+# environment (development/test/stage/production)
+env: development
+# app key
+laravel_app_key: laravel_app_key
+# debug mode (true | false)
+laravel_app_debug: false
+# app url
+laravel_app_url: pdf-generate-service.local
+# database host (ip or dns name)
+laravel_db_host: localhost
+# database port
+laravel_db_port: 3306
+# database password
+laravel_db_password: laravel_db_password
+# name of the database
+laravel_db_database: pdf_generate_service
+# database username
+laravel_db_username: pdf_generate_service
+# sets the laravel queue connection
+laravel_queue_connection: sync
+# rabbitmq (ip or dns name)
+laravel_rabbitmq_host: rabbitmq.local
+# rabbitmq user
+laravel_rabbitmq_user: rabbitmq
+laravel_rabbitmq_password: laravel_rabbitmq_password
+laravel_personal_access_client_id: laravel_personal_access_client_id
+laravel_horizon_basic_auth_username: laravel_horizon_basic_auth_username
+laravel_horizon_basic_auth_password: laravel_horizon_basic_auth_password
+oauth_private_key: oauth_private_key
+oauth_public_key: oauth_public_key
+
+# set the size of the persistent volume (50Gi)
+persistent_volume:
+  size: 50Gi
+metrics_sidecar_ressources_requests_memory: 64Mi
+ressources_enabled: true

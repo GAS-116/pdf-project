@@ -1,0 +1,92 @@
+CreatePdf:
+  type: object
+  required:
+    - template
+    - schema
+  properties:
+    template:
+      type: array
+      items:
+        $ref: '#/Template'
+    schema:
+      type: array
+      items:
+        $ref: '#/Schema'
+    options:
+      type: array
+Template:
+  type: object
+  required:
+    - name
+    - data
+  properties:
+    name:
+      type: string
+    data:
+      type: string
+Schema:
+  type: object
+  required:
+    - name
+    - type
+    - coordination
+    - size
+    - font
+    - width
+    - height
+    - custom_location
+  properties:
+    name:
+      type: string
+    type:
+      type: string
+      enum:
+        - image
+        - text
+        - eps
+        - svg
+    coordination:
+      type: array
+    size:
+      type: number
+      minimum: 10
+    font:
+      type: string
+    width:
+      type: number
+      minimum: 0
+    height:
+      type: number
+      minimum: 0
+    icc:
+      type: string
+      description: "Only for type images"
+    xmp_data:
+      type: string
+      description: "Add xmp data like < xmp : Sparte > Leben< / xmp : Sparte > "
+    is_circle:
+      type: boolean
+      description: "Put image into circle"
+    circle_radius:
+      type: number
+      description: "Add custom value of radius (if doesn't exist will calculate by default)"
+      minimum: 0
+    circle_x:
+      type: number
+      description: "Coordinate x for circle (if doesn't exist circle_x will calculate by default)"
+    circle_y:
+      type: number
+      description: "Coordinate x for circle (if doesn't exist circle_y will calculate by default)"
+    line_height_pt:
+      type: number
+      minimum: 0
+      description: "Add line height in pt"
+    letter_spacing:
+      type: number
+      description: "Letter spacing, support positive and negative values"
+    custom_location:
+      type: boolean
+    is_multicell:
+      type: boolean
+    multicell_options:
+      type: array

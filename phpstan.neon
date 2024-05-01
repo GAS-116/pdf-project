@@ -1,0 +1,64 @@
+# vendor/bin/phpstan analyse
+parameters:
+    inferPrivatePropertyTypeFromConstructor: true
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    reportUnmatchedIgnoredErrors: false
+    level: 8
+    paths:
+        - app
+    ignoreErrors:
+        - '#^Call to an undefined method Illuminate\\#'
+        - '#^Call to an undefined static method Illuminate\\#'
+        - '#^Cannot access offset \.config\. on Illuminate\\#'
+        - '#^Call to static method user\(\) on an unknown class Auth.#'
+        - '#^Method App\\Http\\Requests\\Rules\\Pdf\:\:fields\(\) has no return type specified.#'
+        - '#^Method App\\Http\\Requests\\Rules\\Base\:\:fields\(\) has no return type specified.#'
+        - '#^Method App\\Http\\Requests\\Rules\\Base\:\:getRules\(\) has no return type specified.#'
+        - '#^Method App\\Http\\Controllers\\Api\\BaseController\:\:successResponse\(\) has no return type specified.#'
+        - '#^Method App\\Http\\Controllers\\Api\\BaseController\:\:successResponse\(\) has parameter \$additionalParams with no type specified.#'
+        - '#^Property App\\Http\\Requests\\Rules\\Pdf\:\:\$schema has no type specified.#'
+        - '#^Property App\\Http\\Requests\\Rules\\Base\:\:\$data has no type specified.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreateFont\:\:\$name.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreateFont\:\:\$font_type.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreateIcc\:\:\$name.#'
+        - '#^Access to an undefined property App\\User\:\:\$sftpSetting.#'
+        - '#^Parameter \#2 \$resource of method League\\Flysystem\\Filesystem\:\:putStream\(\) expects resource, resource\|false given.#'
+        - '#^Parameter \#1 \$fp of function fclose expects resource, resource\|false given.#'
+        - '#^Parameter \#1 \$credentials of static method Illuminate\\Support\\Facades\\Auth\:\:attempt\(\) expects array, array\|Illuminate\\Http\\Request\|string\|null given.#'
+        - '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$name.#'
+        - '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$email.#'
+        - '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$password.#'
+        - '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$remember_me.#'
+        - '#^Cannot access property \$id on Illuminate\\Contracts\\Auth\\Authenticatable\|null.#'
+        - '#^Call to an undefined static method App\\User\:\:find\(\).#'
+        - '#^Cannot access property \$id on Illuminate\\Contracts\\Auth\\Authenticatable\|null.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreateTemplatePdf\:\:\$templates.#'
+        - '#^Access to an undefined property object\:\:\$id.#'
+        - '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$data.#'
+        - '#^Access to an undefined property object\:\:\$file_name.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreatePdf\:\:\$options.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\UpdatePdfSchema\:\:\$options.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreatePdf\:\:\$schema.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\UpdatePdfSchema\:\:\$schema.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\CreatePdf\:\:\$templates.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\GeneratePdf\:\:\$template_name.#'
+        - '#^Access to an undefined property App\\Models\\PdfTemplate\:\:\$pdf.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\GeneratePdf\:\:\$data.#'
+        - '#^Access to an undefined property App\\Http\\Requests\\GeneratePdf\:\:\$file_name.#'
+        - '#^Parameter \#4 \$pdfName of method App\\Services\\PdfService\:\:generate\(\) expects null, string given.#'
+        - '#^Parameter \#1 \$str of function base64_encode expects string, string\|false given.#'
+    excludePaths:
+        - app/Transformers
+        - app/ValueObjects
+        - app/TCPDF
+        - app/Models
+        - app/Repositories
+        - app/Jobs
+        - app/Contracts
+        - app/Exceptions
+        - app/Http/Middleware
+        - app/Providers/gasRabbitMqConsumer.php
+        - app/Providers/AuthServiceProvider.php
+        - app/User.php
+        - app/Libs/Pdf.php

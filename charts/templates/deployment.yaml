@@ -1,0 +1,165 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels: {{ include "common.labels" . | indent 4 }}
+  name: {{ .Chart.Name }}-{{ .Release.Namespace }}-deployment
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ .Chart.Name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+      name: {{ .Chart.Name }}-{{ .Release.Namespace }}-pod
+      labels: {{ include "common.labels" . | indent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecretName }}
+      containers:
+        - name: {{ .Chart.Name }}-{{ .Release.Namespace }}-container
+          image: {{ template "pdf-generate-service.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          securityContext:
+            privileged: false
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-{{ .Release.Namespace }}-env-configmap
+            - secretRef:
+                name: {{ .Chart.Name }}-{{ .Release.Namespace }}-secrets
+          # readinessProbe:
+          #   httpGet:
+          #     path: /api-docs
+          #     port: 8080
+          #   initialDelaySeconds: 60
+          #   timeoutSeconds: 5
+          #   periodSeconds: 10
+          #   failureThreshold: 3
+          # livenessProbe:
+          #   httpGet:
+          #     path: /api-docs
+          #     port: 8080
+          #   initialDelaySeconds: 180
+          #   timeoutSeconds: 5
+          #   periodSeconds: 10
+          #   failureThreshold: 10
+          {{ if .Values.ressources_enabled }}
+          resources:
+            requests:
+              memory: {{ .Values_ressources_requests_memory | default "1Gi"}}
+          {{ end }}
+          volumeMounts:
+            - name: pdf-data
+              mountPath: /home/gas/application/storage/app/persistent
+            - name: oauth-keys
+              mountPath: /home/gas/application/storage/oauth-private.key
+              subPath: OAUTH_PRIVATE_KEY
+            - name: oauth-keys
+              mountPath: /home/gas/application/storage/oauth-public.key
+              subPath: OAUTH_PUBLIC_KEY
+        - name: metrics-sidecar
+          image: my-proxy-quay/prometheus/node-exporter
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /data/gas/application/storage/app/persistent
+              name: pdf-data
+              subPath: data
+          ports:
+            - containerPort: 9100
+              name: metrics
+              protocol: TCP
+          args:
+            - --no-collector.arp
+            - --no-collector.bcache
+            - --no-collector.bonding
+            - --no-collector.buddyinfo
+            - --no-collector.conntrack
+            - --no-collector.cpu
+            - --no-collector.cpufreq
+            - --no-collector.diskstats
+            - --no-collector.drbd
+            - --no-collector.edac
+            - --no-collector.entropy
+            - --no-collector.filefd
+            - --no-collector.hwmon
+            - --no-collector.infiniband
+            - --no-collector.interrupts
+            - --no-collector.ipvs
+            - --no-collector.ksmd
+            - --no-collector.loadavg
+            - --no-collector.logind
+            - --no-collector.mdadm
+            - --no-collector.meminfo
+            - --no-collector.meminfo_numa
+            - --no-collector.mountstats
+            - --no-collector.netclass
+            - --no-collector.netdev
+            - --no-collector.netstat
+            - --no-collector.nfs
+            - --no-collector.nfsd
+            - --no-collector.ntp
+            - --no-collector.perf
+            - --no-collector.pressure
+            - --no-collector.processes
+            - --no-collector.qdisc
+            - --no-collector.runit
+            - --no-collector.sockstat
+            - --no-collector.stat
+            - --no-collector.supervisord
+            - --no-collector.systemd
+            - --no-collector.tcpstat
+            - --no-collector.textfile
+            - --no-collector.time
+            - --no-collector.timex
+            - --no-collector.uname
+            - --no-collector.vmstat
+            - --no-collector.wifi
+            - --no-collector.xfs
+            - --no-collector.zfs
+          resources:
+            requests:
+              memory: {{ .Values.metrics_sidecar_ressources_requests_memory | default "64Mi"}}
+      initContainers:
+      - name: create-folders
+        imagePullPolicy: IfNotPresent
+        image: my-proxy/library/busybox
+        command: ["sh", "-c"]
+        args:
+          - >-
+              mkdir -p
+              /mnt/fonts
+              /mnt/templates
+              /mnt/pdfs
+              /mnt/icc
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: pdf-data
+            mountPath: /mnt
+      - name: fix-permissions
+        imagePullPolicy: IfNotPresent
+        image: my-proxy/library/busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /mnt/persistent"]
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: pdf-data
+            mountPath: /mnt/persistent
+      volumes:
+        - name: pdf-data
+          persistentVolumeClaim:
+            claimName: pdf-generate-api-{{ .Release.Namespace }}-data
+        - name: oauth-keys
+          secret:
+            secretName: {{ .Chart.Name }}-{{ .Release.Namespace }}-secrets

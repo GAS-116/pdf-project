@@ -1,0 +1,18 @@
+CreateFont:
+  type: object
+  required:
+    - name
+    - php_file
+    - z_file
+    - z_file_name
+  properties:
+    name:
+      type: string
+    php_file:
+      type: string
+      description: base64
+    z_file_name:
+      type: string
+    z_file:
+      type: string
+      description: base64

@@ -1,0 +1,11 @@
+CreateIcc:
+  type: object
+  required:
+    - name
+    - icc_file
+  properties:
+    name:
+      type: string
+    icc_file:
+      type: string
+      description: base64

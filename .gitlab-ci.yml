@@ -1,0 +1,327 @@
+---
+default:
+  image: my-proxy/library/docker:20.10.12
+  services:
+    - name: my-proxy/library/docker:20.10.12-dind
+      alias: docker
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_REGISTRY: my.sh
+  DOCKER_REGISTRY_IMAGE: ${DOCKER_REGISTRY}/my/pdf-generate-service
+
+stages:
+  - check_code_quality
+  - unit_test
+  - integration_test
+  - bump-version
+  - build-docker
+  - build-helm
+  - deploy
+
+# ------- Templates ------------------------------------
+.before_script_template: &prepare_git_for_bump2_version
+  image: $DOCKER_REGISTRY/my/my_deploy_image:latest
+  before_script:
+    - git tag -d $(git tag -l)
+    - mkdir ~/.ssh/
+    - eval `ssh-agent`
+    - cat "${SSH_PRIVATE_KEY}" | ssh-add - # TODO: Replace private key with the technical user key
+    - cat "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+    - ssh -T git@gitlab.gas.com
+    - git config --global user.email "sa-ansible-terraform-my@gas.com"
+    - git config --global user.name "Gitlab CI"
+    - git remote set-url origin git@gitlab.gas.com:${CI_PROJECT_PATH}
+
+.helm_script_template: &helm_build_and_deploy
+  image: $DOCKER_REGISTRY/my/my_deploy_image:latest
+  script:
+    - helm plugin install https://github.com/chartmuseum/helm-push # TODO: Move to deployment image
+    - helm repo add --username=${REGISTRY_USERNAME} --password=${REGISTRY_PASSWORD} my https://my.sh/chartrepo/my
+    - helm repo update
+    - helm package --app-version=${DOCKER_TAG} --version=${DOCKER_TAG} charts/
+    - helm cm-push --username=${REGISTRY_USERNAME} --password=${REGISTRY_PASSWORD} pdf-generate-service-$DOCKER_TAG.tgz my
+
+.before_script_docker: &docker_build_and_push
+  before_script:
+    - cp .env.example .env
+    - docker login -u ${REGISTRY_USERNAME} -p ${REGISTRY_PASSWORD} ${DOCKER_REGISTRY}
+
+# ------- End Templates --------------------------------
+check_code_quality:
+  stage: check_code_quality
+  image: my/php-test-image:8.0.14
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - vendor/
+  before_script:
+    - cp ./.docker/auth.json ~/.composer/auth.json
+    - composer install
+  script:
+    - php vendor/bin/phpstan analyse --memory-limit=2G
+    - php vendor/bin/php-cs-fixer fix app --dry-run
+  allow_failure: true
+  only:
+    refs:
+      - merge_requests
+
+unit_test:
+  stage: unit_test
+  image: my/php-test-image:8.0.14
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - vendor/
+  before_script:
+    - cp ./.docker/auth.json ~/.composer/auth.json
+    - composer install
+  script:
+    - php -d zend_extension=/usr/local/lib/php/extensions/no-debug-non-zts-20190902/xdebug.so -d xdebug.default_enable=on vendor/phpunit/phpunit/phpunit -c phpunit.xml --testsuite Unit
+  only:
+    refs:
+      - merge_requests
+
+integration_test:
+  stage: integration_test
+  image: my/php-test-image:8.0.14
+  services:
+    - name: my-proxy/library/mysql:5.7
+      alias: my_mysql
+    - name: my-proxy/library/rabbitmq:3.8-management
+      alias: my_rabbitmq
+    - name: my-proxy/library/redis:5.0.7
+      alias: my_redis
+  variables:
+    LARAVEL_REDIS_HOST: "my_redis"
+    REDIS_HOST: "my_redis"
+    LARAVEL_REDIS_PASSWORD: "null"
+    LARAVEL_REDIS_PORT: 6379
+    REDIS_PORT: 6379
+    MYSQL_ROOT_PASSWORD: password
+    RABBITMQ_PORT: 5672
+    RABBITMQ_ERLANG_COOKIE: "32466fe3825af28b1ba7af3691aead4c"
+    RABBITMQ_DEFAULT_USER: "rabbitmq"
+    RABBITMQ_DEFAULT_PASS: "rabbitmq"
+    RABBITMQ_DEFAULT_VHOST: "/"
+    LARAVEL_APP_ENV: "local"
+    LARAVEL_APP_KEY: ""
+    LARAVEL_APP_DEBUG: "true"
+    LARAVEL_APP_URL: "http://localhost"
+    LARAVEL_LOG_CHANNEL: "stack"
+    LARAVEL_DB_HOST: "my_mysql"
+    LARAVEL_DB_PORT: "3306"
+    LARAVEL_DB_DATABASE: "login_service"
+    LARAVEL_DB_USERNAME: "login_service"
+    LARAVEL_DB_PASSWORD: "password"
+    LARAVEL_MAIL_DRIVER: "smtp"
+    LARAVEL_MAIL_HOST: "smtp.mailtrap.io"
+    LARAVEL_MAIL_PORT: 2525
+    LARAVEL_MAIL_USERNAME: "null"
+    LARAVEL_MAIL_PASSWORD: "null"
+    LARAVEL_MAIL_ENCRYPTION: "null"
+    LARAVEL_RABBITMQ_HOST: "my_rabbitmq"
+    LARAVEL_RABBITMQ_USER: "rabbitmq"
+    LARAVEL_RABBITMQ_PASSWORD: "rabbitmq"
+    TOKEN_VALIDATION_SERVICE: "http://auth_service:8080/api/v1/internal/validate"
+    USER_ATTRIBUTE_MAPPING_URL: "http://campaign_platform:8080/api/v1/internal/user_attribute_mapping/"
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - vendor/
+  before_script:
+    - eval `ssh-agent`
+    - cat "${SSH_PRIVATE_KEY}" | ssh-add -
+    - cat "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+    - ssh -T git@gitlab.gas.com
+    - git clone git@gitlab.gas.com:my/services/docker.git
+    - for sql_file in `ls docker/config/mysql/*.sql`; do mysql -hmy_mysql -uroot -ppassword < $sql_file ; done
+    - cp ./.docker/auth.json ~/.composer/auth.json
+    - cp .env.example .env
+    - composer install
+  script:
+    - php vendor/phpunit/phpunit/phpunit -c phpunit.xml --no-coverage --testsuite Integration
+  only:
+    refs:
+      - merge_requests
+
+bump_version:
+  stage: bump-version
+  <<: *prepare_git_for_bump2_version
+  script:
+    - |
+      if [[ "${CI_COMMIT_TAG}" != "" ]];then
+        echo "DOCKER_TAG=${CI_COMMIT_TAG}" >> build.env
+      else
+        shopt -s nocasematch
+
+        case ${CI_COMMIT_REF_NAME} in
+
+        release/*)
+        DOCKER_TAG=$(echo $CI_COMMIT_TITLE | cut -f 2 -d "'")
+        echo "DOCKER_TAG=$(cat VERSION)-${DOCKER_TAG/\//-}-$(date +%d%m%Y%H%M)dev" >> build.env
+        ;;
+
+        master)
+        if [[ $CI_COMMIT_TITLE  =~ "hotfix" ]];then bump2version patch; else bump2version minor;fi
+        echo "DOCKER_TAG=$(cat VERSION)" >> build.env
+        git push --tags origin HEAD:${CI_COMMIT_REF_NAME}
+        ;;
+
+        *)
+        echo 'Not a valid branch'
+        ;;
+        esac
+      fi
+  artifacts:
+    reports:
+      dotenv: build.env
+  only:
+    refs:
+      - /^release\/.*$/
+      - tags
+      - master
+
+build_docker_image:
+  stage: build-docker
+  <<: *docker_build_and_push
+  script:
+   - docker build -t ${DOCKER_REGISTRY_IMAGE}:test -f ./.docker/Dockerfile --target deployment --build-arg ENV=test .
+  only:
+    refs:
+      - merge_requests
+
+build_and_push_docker_image:
+  stage: build-docker
+  <<: *docker_build_and_push
+  script:
+    - |
+      if [[ "${CI_COMMIT_TAG}" != "" ]];then
+        docker build -t ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG} -f ./.docker/Dockerfile --target deployment --build-arg ENV=test .
+        docker push ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG}
+      else
+        # shopt -s nocasematch
+
+        case ${CI_COMMIT_REF_NAME} in
+
+        release/*)
+        docker build -t ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG} -f ./.docker/Dockerfile --target deployment --build-arg ENV=development .
+        docker push ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG}
+        ;;
+
+        master)
+        docker build -t ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG} -f ./.docker/Dockerfile --target deployment --build-arg ENV=production .
+        docker push ${DOCKER_REGISTRY_IMAGE}:${DOCKER_TAG}
+        ;;
+
+        *)
+        echo 'Not a valid branch'
+        ;;
+        esac
+      fi
+  only:
+    refs:
+      - /^release\/.*$/
+      - tags
+      - master
+  needs:
+    - job: bump_version
+      artifacts: true
+
+build_and_push_helm_chart:
+  stage: build-helm
+  <<: *helm_build_and_deploy
+  only:
+    refs:
+      - /^release\/.*$/
+      - tags
+      - master
+  needs:
+    - job: bump_version
+      artifacts: true
+    - job: build_and_push_docker_image
+      artifacts: true
+
+deploy_development:
+  stage: deploy
+  variables:
+    CI_ENVIRONMENT_NAME: development
+    APPLICATION: pdf_generate_service
+    APPVERSION: $DOCKER_TAG
+  trigger:
+    project: my/ansible-deployment
+    branch: master
+  only:
+    refs:
+      - /^release\/.*$/
+  needs:
+    - job: bump_version
+      artifacts: true
+    - job: build_and_push_docker_image
+      artifacts: true
+    - job: build_and_push_helm_chart
+      artifacts: true
+
+deploy_testing:
+  stage: deploy
+  variables:
+    CI_ENVIRONMENT_NAME: testing
+    APPLICATION: pdf_generate_service
+    APPVERSION: $DOCKER_TAG
+  trigger:
+    project: my/ansible-deployment
+    branch: master
+  only:
+    refs:
+      - tags
+  needs:
+    - job: bump_version
+      artifacts: true
+    - job: build_and_push_docker_image
+      artifacts: true
+    - job: build_and_push_helm_chart
+      artifacts: true
+
+deploy_stage:
+  stage: deploy
+  variables:
+    CI_ENVIRONMENT_NAME: stage
+    APPLICATION: pdf_generate_service
+    APPVERSION: $DOCKER_TAG
+  trigger:
+    project: my/ansible-deployment
+    branch: master
+  only:
+    refs:
+      - tags
+  when: manual
+  needs:
+    - job: bump_version
+      artifacts: true
+    - job: build_and_push_docker_image
+      artifacts: true
+    - job: build_and_push_helm_chart
+      artifacts: true
+
+deploy_production:
+  stage: deploy
+  variables:
+    CI_ENVIRONMENT_NAME: production
+    APPLICATION: pdf_generate_service
+    APPVERSION: $DOCKER_TAG
+  trigger:
+    project: my/ansible-deployment
+    branch: master
+  only:
+    refs:
+      - master
+  when: manual
+  needs:
+    - job: bump_version
+      artifacts: true
+    - job: build_and_push_docker_image
+      artifacts: true
+    - job: build_and_push_helm_chart
+      artifacts: true

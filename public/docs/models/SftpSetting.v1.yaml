@@ -1,0 +1,11 @@
+SftpSetting:
+  type: object
+  properties:
+    host:
+      type: string
+    port:
+      type: number
+    username:
+      type: string
+    root_path:
+      type: string

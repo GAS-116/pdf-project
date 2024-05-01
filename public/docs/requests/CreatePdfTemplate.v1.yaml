@@ -1,0 +1,19 @@
+CreatePdfTemplate:
+  type: object
+  required:
+    - template
+  properties:
+    template:
+      type: array
+      items:
+        $ref: '#/Template'
+Template:
+  type: object
+  required:
+    - name
+    - data
+  properties:
+    name:
+      type: string
+    data:
+      type: string

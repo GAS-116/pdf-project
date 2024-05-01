@@ -1,0 +1,7 @@
+Pdf:
+  type: object
+  properties:
+    user_id:
+      type: number
+    schema:
+      type: array

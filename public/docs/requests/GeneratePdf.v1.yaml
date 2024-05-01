@@ -1,0 +1,12 @@
+GeneratePdf:
+  type: object
+  required:
+    - template_name
+    - data
+  properties:
+    template_name:
+      type: string
+    data:
+      type: array
+    file_name:
+      type: string

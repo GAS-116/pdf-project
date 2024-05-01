@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels: {{ include "common.labels" . | indent 4 }}
+  name: {{ .Chart.Name }}-{{ .Release.Namespace }}-env-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  ENV: {{ required "Laravel App Env is required" .Values.env | quote }}
+  LARAVEL_APP_KEY: {{ required "Laravel App Key is required" .Values.laravel_app_key | quote }}
+  LARAVEL_APP_DEBUG: {{ required "Laravel App Debug is required" .Values.laravel_app_debug | quote }}
+  LARAVEL_APP_URL: {{  required "Laravel App Url is required" .Values.laravel_app_url | quote }}
+  LARAVEL_LOG_CHANNEL: 'stderr'
+  LARAVEL_DB_HOST: {{ required "Laravel DB Host is required" .Values.laravel_db_host | quote }}
+  LARAVEL_DB_PORT: {{ required "Laravel DB Port is required" .Values.laravel_db_port | quote }}
+  LARAVEL_DB_DATABASE: {{ required "Laravel DB Database is required" .Values.laravel_db_database | quote }}
+  LARAVEL_DB_USERNAME: {{ required "Laravel DB Username is required" .Values.laravel_db_username | quote }}
+  LARAVEL_QUEUE_CONNECTION: {{ required "Laravel Queue Connection is required" .Values.laravel_queue_connection | quote }}
+  LARAVEL_PDF_FONT_PATH: 'app/persistent/fonts'
+  LARAVEL_PDF_TEMPLATE_PATH: 'app/persistent/templates'
+  LARAVEL_PDF_FILE_PATH: 'app/persistent/pdfs'
+  LARAVEL_PDF_ICC_PATH: 'app/persistent/icc'
+  PHP_MEMORY_LIMIT: '2G'
+  LARAVEL_RABBITMQ_HOST: {{ required "Laravel RabbitMQ Host is required" .Values.laravel_rabbitmq_host | quote }}
+  LARAVEL_RABBITMQ_USER: {{ required "Laravel RabbitMQ User is required" .Values.laravel_rabbitmq_user | quote }}
+  LARAVEL_REDIS_HOST: {{ required "Laravel Redis Host is required" .Values.laravel_redis_host | quote }}
+  LARAVEL_REDIS_PASSWORD: {{ required "Laravel Redis Password is required" .Values.laravel_redis_password | quote }}
+  LARAVEL_REDIS_PORT: {{ required "Laravel Redis Port is required" .Values.laravel_redis_port | quote }}
+  TOKEN_VALIDATION_SERVICE: {{ required "Laravel Redis Port is required" .Values.token_validation_service | quote }}
+---

@@ -1,0 +1,316 @@
+openapi: 3.0.0
+info:
+  title: PDF generate service API
+  version: '2.0'
+  description: "Documentation API\n\nAuthentication\n\nAt first each account will get an ApiKey.\n\nEach request must include the header Authorization : Bearer {BearerToken}. ApiKey is only required when requesting a Bearer Token for a user."
+  contact:
+    email: systems@gas.com
+  license:
+    name: Proprietary
+paths:
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/Login.v1.yaml#/Login'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: './models/Login.v1.yaml#/Login'
+  /api/auth/signup:
+    post:
+      summary: Sign up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/Signup.v1.yaml#/Signup'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Successfully created user!'
+  /api/pdf:
+    post:
+      summary: Create Pdf
+      tags:
+        - Pdf
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/CreatePdf.v1.yaml#/CreatePdf'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Pdf'
+  /api/pdf/generate:
+    post:
+      summary: Generate Pdf
+      tags:
+        - Pdf
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/GeneratePdf.v1.yaml#/GeneratePdf'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    description: Base 64 format file
+  /api/pdf/template:
+    post:
+      summary: Create Pdf Template
+      tags:
+        - Pdf
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/CreatePdfTemplate.v1.yaml#/CreatePdfTemplate'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PdfTemplate'
+  /api/sftp-settings:
+    post:
+      summary: Create Sftp Settings
+      tags:
+        - Sftp-Settings
+      security:
+        - BearerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './requests/CreateSftpSettings.v1.yaml#/CreateSftpSettings'
+      responses:
+        '200':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SftpSetting'
+    put:
+      summary: Update Sftp Settings
+      tags:
+        - Sftp-Settings
+      security:
+        - BearerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './requests/UpdateSftpSettings.v1.yaml#/UpdateSftpSettings'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SftpSetting'
+    delete:
+      summary: Delete Sftp Settings
+      tags:
+        - Sftp-Settings
+      security:
+        - BearerToken: []
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+  /api/fonts:
+    post:
+      summary: Create Font
+      tags:
+        - Fonts
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/CreateFont.v1.yaml#/CreateFont'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Font'
+    get:
+      summary: Get All fonts
+      tags:
+        - Fonts
+      security:
+        - BearerToken: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Font'
+  /api/icc:
+    post:
+      summary: Add icc profile
+      tags:
+        - Icc
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './requests/CreateIcc.v1.yaml#/CreateIcc'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Icc'
+    get:
+      summary: Get All icc files
+      tags:
+        - Icc
+      security:
+        - BearerToken: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Icc'
+  /api/fonts/get:
+    get:
+      summary: Get Font by Name
+      tags:
+        - Fonts
+      security:
+        - BearerToken: []
+      parameters:
+        - schema:
+          type: string
+          name: name
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Font'
+  /api/icc/get:
+    get:
+      summary: Get Icc profile by Name
+      tags:
+        - Icc
+      security:
+        - BearerToken: []
+      parameters:
+        - schema:
+          type: string
+          name: name
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Icc'
+components:
+  schemas:
+    Pdf:
+      $ref: './models/Pdf.v1.yaml#/Pdf'
+    PdfTemplate:
+      $ref: './models/PdfTemplate.v1.yaml#/PdfTemplate'
+    SftpSetting:
+      $ref: './models/SftpSetting.v1.yaml#/SftpSetting'
+    Font:
+      $ref: './models/Font.v1.yaml#/Font'
+    Icc:
+      $ref: './models/Icc.v1.yaml#/Icc'
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: "access_token"
